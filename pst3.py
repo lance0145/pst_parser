@@ -3,13 +3,6 @@ import csv
 import pypff
 
 def processMessage(message, folder_name, password):
-    # return {
-    #     "folder_name": folder_name,
-    #     "subject": message.subject,
-    #     "sender": message.sender_name,
-    #     "header": message.transport_headers,
-    #     "password": password,
-    # }
     return {
         "folder_name": folder_name,
         "sender": message.sender_name,
@@ -40,13 +33,13 @@ def create_csv():
         f.close()
 
 def get_password(my_string):
+    next_word = ''
     try:
-        # split_string = my_string.split()
-        # if 'http' in split_string:
-        #     next_word = 'found'
-        # else:
-        #     next_word = 'not found'
-        next_word = my_string.split('http', maxsplit=1)[-1].split(maxsplit=1)[0]
+        my_string = my_string.decode()
+        string_list = my_string.split()
+        for s in range(len(string_list)):
+            if "Password" in string_list[s] or "password" in string_list[s] or "PWD" in string_list[s] or "pwd" in string_list[s]:
+                next_word = string_list[s+1]
     except:
         next_word = ''
     return next_word
@@ -54,7 +47,6 @@ def get_password(my_string):
 pst = pypff.file()
 pst.open("test.pst")
 base = pst.get_root_folder()
-#header = ['folder_name', 'subject', 'sender', 'header', 'password']
 header = ['folder_name', 'sender', 'password']
 create_csv()
 folderTraverse(base)
