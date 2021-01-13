@@ -1,6 +1,7 @@
 import os
 import re
 import csv
+import date
 import pypff
 import datefinder
 
@@ -18,7 +19,11 @@ def processMessage(message, folder_name, password):
     return {
         "folder_name": folder_name,
         "sender": message.sender_name,
-        "password": password,
+        "key_word": key_word,
+        "next_word": next_word,
+        "date_found": date_found,
+        "cc_found": cc_found,
+        "possible_id": possible_id,
     }
 
 def folderTraverse(base):
@@ -44,18 +49,13 @@ def folderReport(message_list):
     :folder_name: The name of an Outlook folder within a PST
     :return: None
     """
-    with open('pst.csv', 'a+', encoding='utf-8') as f:
+    with open(filename, 'a+', encoding='utf-8') as f:
         csv_writer = csv.DictWriter(f, delimiter='|', fieldnames=header)
         csv_writer.writerows(message_list)
         f.close()
 
-def create_csv():
-    with open('pst.csv', 'w', encoding='utf-8') as f:
-        csv_writer = csv.DictWriter(f, delimiter='|', fieldnames=header)
-        csv_writer.writeheader()
-        f.close()
-
 def get_keyword_nextword(my_string):
+    possible_id = []
     key_word = []
     next_word = []
     date_found = []
@@ -70,13 +70,18 @@ def get_keyword_nextword(my_string):
                     next_word.append(string_list[s+1])
             date_found.append(datefinder.find_dates(string_list[s]))
             cc_found.append(re.search(r"(^|\s+)(\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{4})(?:\s+|$)", string_list[s]))
+            possible_id.append(re.search(r'(?:\d+[a-zA-Z]+|[a-zA-Z]+\d+)', string_list[s]))
     except:
         pass
-    return keyword, next_word, date_found, cc_found
+    return key_word, next_word, date_found, cc_found
 
-def get_keyword():
+def get_keywords():
+    keyfile = 'keywords.txt'
+    if not os.path.exists(keyfile):
+	    sys.exit("The file %s does not exist, please try again." % keyfile)
+    global keywords
     keywords = []
-    with open('input.txt', 'r', encoding='utf-8') as csv_file:
+    with open(keyfile, 'r', encoding='utf-8') as csv_file:
         csv_reader = csv.DictReader(csv_file, delimiter=',')
         for row in csv_reader:
             keyword = row['keyword']
@@ -84,12 +89,46 @@ def get_keyword():
             keywords.append(keyword)
     csv_file.close()
 
+def create_csv(file):
+    global filename
+    filename = "report/" + str(file)[:-4] + "_" + date.today().strftime('%Y.%m.%d') + ".csv"
+    file_exist = False
+    file_int = 0
+    if not os.path.exists(filename):
+        os.makedirs(os.path.dirname(filename), 0o777, True)
+        data = open(filename, "w", encoding='utf-8')
+        file_exist = True
+    while (file_exist == False):
+        file_int += 1
+        filename = "report/" + str(file)[:-4] + "_" + date.today().strftime('%Y.%m.%d') + "_" + str(file_int) + ".csv"
+        if not os.path.exists(filename):
+            os.makedirs(os.path.dirname(filename), 0o777, True)
+            data = open(filename, "w", encoding='utf-8')
+            file_exist = True
+    with open(filename, 'w', encoding='utf-8') as f:
+        header = ['folder_name', 'sender', 'key_word', 'next_word', 'date_found', 'cc_found', 'possible_id']
+        csv_writer = csv.DictWriter(f, delimiter='|', fieldnames=header)
+        csv_writer.writeheader()
+        f.close()
+
+def get_pstfiles():
+    params = argparse.ArgumentParser()
+    params.add_argument('pstfile', help="Directory of pst file to parse")
+    args = params.parse_args()
+    global pstfile
+    pstfile = args.pstfile
+    if not os.path.exists(pstfile):
+	    sys.exit("The directory %s does not exist, please try again." % pstfile)
+
 if __name__ == "__main__":
-    get_keyword()
+    get_keywords()
+    get_pstfiles()
     pst = pypff.file()
-    pst.open("test.pst")
-    base = pst.get_root_folder()
-    header = ['folder_name', 'sender', 'password']
-    create_csv()
-    folderTraverse(base)
+    if pstfile:
+        for file in os.listdir(pstfile):
+            if file.endswith(".pst"):
+                pst.open(file)
+                base = pst.get_root_folder()
+                create_csv(file)
+                folderTraverse(base)
     pst.close()
