@@ -40,7 +40,12 @@ def folderTraverse(base):
         message_list = []
         for message in folder.sub_messages:
             password = get_keyword_nextword(message.plain_text_body)
-            message_dict = processMessage(message, folder.name, key_word, next_word, date_found, cc_found, possible_id)
+            key_word2 = [x for x in key_word if x]
+            next_word2 = [x for x in next_word if x]
+            date_found2 = [x for x in date_found if x]
+            cc_found2 = [x for x in cc_found if x]
+            possible_id2 = [x for x in possible_id if x]
+            message_dict = processMessage(message, folder.name, key_word2, next_word2, date_found2, cc_found2, possible_id2)
             message_list.append(message_dict)
         folderReport(message_list)
 
@@ -71,10 +76,19 @@ def get_keyword_nextword(my_string):
                 if keywords[k] in string_list[s]:
                     key_word.append(string_list[s])
                     next_word.append(string_list[s+1])
-            date_found.append(datefinder.find_dates(string_list[s]))
-            cc_found.append(re.search(r"(^|\s+)(\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{4})(?:\s+|$)", string_list[s]))
-            possible_id.append(re.search(r'(?:\d+[a-zA-Z]+|[a-zA-Z]+\d+)', string_list[s]))
-    except:
+            df = list(datefinder.find_dates(string_list[s]))
+            try:
+                date_found.append(df[0].strftime('%m/%d/%Y'))
+                #print(string_list[s], string_list[s+1], df[0].strftime('%m/%d/%Y'))
+            except:
+                pass
+            cc = re.findall(r"(^|\s+)(\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{4})(?:\s+|$)", string_list[s])
+            cc_found.append(cc)
+            print(cc)
+            id = re.findall(r'(?:\d+[a-zA-Z]+|[a-zA-Z]+\d+)', string_list[s])
+            possible_id.append(id)
+            print(id)
+    except Exception as e:
         pass
     return key_word, next_word, date_found, cc_found, possible_id
 
@@ -124,17 +138,14 @@ def get_pstfiles():
 
 if __name__ == "__main__":
     get_keywords()
-    get_pstfiles()
+    # get_pstfiles()
     pst = pypff.file()
-    if pstfile:
-        for file in os.listdir(pstfile):
-            if file.endswith(".pst"):
-                try:
-                    pst.open("test.pst")
-                    base = pst.get_root_folder()
-                    header = ['folder_name', 'sender', 'key_word', 'next_word', 'date_found', 'cc_found', 'possible_id']
-                    create_csv(file)
-                    folderTraverse(base)
-                except Exception as e:
-                    print(e)
+    # if pstfile:
+    #     for file in os.listdir(pstfile):
+    #         if file.endswith(".pst"):
+    pst.open("test.pst")
+    base = pst.get_root_folder()
+    header = ['folder_name', 'sender', 'key_word', 'next_word', 'date_found', 'cc_found', 'possible_id']
+    create_csv("test.pst")
+    folderTraverse(base)
     pst.close()
