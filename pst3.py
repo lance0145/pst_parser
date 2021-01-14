@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import csv
+import glob
 import pypff
 import argparse
 import datefinder
@@ -41,10 +42,15 @@ def folderTraverse(base):
         for message in folder.sub_messages:
             password = get_keyword_nextword(message.plain_text_body)
             key_word2 = [x for x in key_word if x]
+            key_word2 = ", ".join(str(e) for e in key_word2)
             next_word2 = [x for x in next_word if x]
+            next_word2 = ", ".join(str(e) for e in next_word2)
             date_found2 = [x for x in date_found if x]
+            date_found2 = ", ".join(str(e) for e in date_found2)
             cc_found2 = [x for x in cc_found if x]
+            cc_found2 = ", ".join(str(e) for e in cc_found2)
             possible_id2 = [x for x in possible_id if x]
+            possible_id2 = ", ".join(str(e) for e in possible_id2)
             message_dict = processMessage(message, folder.name, key_word2, next_word2, date_found2, cc_found2, possible_id2)
             message_list.append(message_dict)
         folderReport(message_list)
@@ -84,25 +90,22 @@ def get_keyword_nextword(my_string):
                 pass
             cc = re.findall(r"(^|\s+)(\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{4})(?:\s+|$)", string_list[s])
             cc_found.append(cc)
-            print(cc)
             id = re.findall(r'(?:\d+[a-zA-Z]+|[a-zA-Z]+\d+)', string_list[s])
             possible_id.append(id)
-            print(id)
     except Exception as e:
         pass
     return key_word, next_word, date_found, cc_found, possible_id
 
 def get_keywords():
-    keyfile = 'keywords.txt'
-    if not os.path.exists(keyfile):
-	    sys.exit("The file %s does not exist, please try again." % keyfile)
+    if not os.path.exists('keywords.txt'):
+	    sys.exit("The keywords.txt not found, place it under same directory of application, please try again.")
     global keywords
     keywords = []
-    with open(keyfile, 'r', encoding='utf-8') as csv_file:
+    print('Extracting keywords.txt')
+    with open('keywords.txt', 'r', encoding='utf-8') as csv_file:
         csv_reader = csv.DictReader(csv_file, delimiter=',')
         for row in csv_reader:
             keyword = row['keyword']
-            print(f'Extracting {keyword}')
             keywords.append(keyword)
     csv_file.close()
 
@@ -127,25 +130,33 @@ def create_csv(file):
         csv_writer.writeheader()
         f.close()
 
-def get_pstfiles():
-    params = argparse.ArgumentParser()
-    params.add_argument('pstfile', help="Directory of pst file to parse")
-    args = params.parse_args()
-    global pstfile
-    pstfile = args.pstfile
-    if not os.path.exists(pstfile):
-	    sys.exit("The directory %s does not exist, please try again." % pstfile)
+# def get_pstfiles():
+#     params = argparse.ArgumentParser()
+#     params.add_argument('pstfile', help="Directory of pst file to parse")
+#     args = params.parse_args()
+#     global pstfile
+#     pstfile = args.pstfile
+#     if not os.path.exists(pstfile):
+# 	    sys.exit("The directory %s does not exist, please try again." % pstfile)
 
 if __name__ == "__main__":
     get_keywords()
-    # get_pstfiles()
     pst = pypff.file()
+    # get_pstfiles()
     # if pstfile:
     #     for file in os.listdir(pstfile):
     #         if file.endswith(".pst"):
-    pst.open("test.pst")
-    base = pst.get_root_folder()
-    header = ['folder_name', 'sender', 'key_word', 'next_word', 'date_found', 'cc_found', 'possible_id']
-    create_csv("test.pst")
-    folderTraverse(base)
-    pst.close()
+    if glob.glob('*.pst'):
+        for file in glob.glob('*.pst'):
+            print('Parsing ' + file)
+            pst.open(file)
+            base = pst.get_root_folder()
+            header = ['folder_name', 'sender', 'key_word', 'next_word', 'date_found', 'cc_found', 'possible_id']
+            create_csv(file)
+            folderTraverse(base)
+            pst.close()
+            print("Saving " + filename)
+    else:
+        sys.exit("The pst file/s not found, place it under same directory of application, please try again.")
+    print("Done.")
+    
