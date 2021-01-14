@@ -1,16 +1,18 @@
 import os
 import re
+import sys
 import csv
-import date
 import pypff
+import argparse
 import datefinder
+from datetime import date
 
 __author__ = 'Allan Abendanio'
 __date__ = '20210111'
 __version__ = 0.01
 __description__ = 'This scripts handles processing and output of PST Email Containers'
 
-def processMessage(message, folder_name, password):
+def processMessage(message, folder_name, key_word, next_word, date_found, cc_found, possible_id):
     """
     The processMessage function processes multi-field messages to simplify collection of information
     :param message: pypff.Message object
@@ -37,8 +39,8 @@ def folderTraverse(base):
             folderTraverse(folder)
         message_list = []
         for message in folder.sub_messages:
-            password = get_password(message.plain_text_body)
-            message_dict = processMessage(message, folder.name, password)
+            password = get_keyword_nextword(message.plain_text_body)
+            message_dict = processMessage(message, folder.name, key_word, next_word, date_found, cc_found, possible_id)
             message_list.append(message_dict)
         folderReport(message_list)
 
@@ -55,6 +57,7 @@ def folderReport(message_list):
         f.close()
 
 def get_keyword_nextword(my_string):
+    global key_word, next_word, date_found, cc_found, possible_id
     possible_id = []
     key_word = []
     next_word = []
@@ -73,7 +76,7 @@ def get_keyword_nextword(my_string):
             possible_id.append(re.search(r'(?:\d+[a-zA-Z]+|[a-zA-Z]+\d+)', string_list[s]))
     except:
         pass
-    return key_word, next_word, date_found, cc_found
+    return key_word, next_word, date_found, cc_found, possible_id
 
 def get_keywords():
     keyfile = 'keywords.txt'
@@ -106,7 +109,6 @@ def create_csv(file):
             data = open(filename, "w", encoding='utf-8')
             file_exist = True
     with open(filename, 'w', encoding='utf-8') as f:
-        header = ['folder_name', 'sender', 'key_word', 'next_word', 'date_found', 'cc_found', 'possible_id']
         csv_writer = csv.DictWriter(f, delimiter='|', fieldnames=header)
         csv_writer.writeheader()
         f.close()
@@ -127,8 +129,12 @@ if __name__ == "__main__":
     if pstfile:
         for file in os.listdir(pstfile):
             if file.endswith(".pst"):
-                pst.open(file)
-                base = pst.get_root_folder()
-                create_csv(file)
-                folderTraverse(base)
+                try:
+                    pst.open("test.pst")
+                    base = pst.get_root_folder()
+                    header = ['folder_name', 'sender', 'key_word', 'next_word', 'date_found', 'cc_found', 'possible_id']
+                    create_csv(file)
+                    folderTraverse(base)
+                except Exception as e:
+                    print(e)
     pst.close()
