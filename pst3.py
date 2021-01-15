@@ -79,9 +79,12 @@ def get_keyword_nextword(my_string):
         string_list = my_string.split()
         for s in range(len(string_list)):
             for k in range(len(keywords)):
-                if keywords[k] in string_list[s]:
+                if keywords[k].lower() in string_list[s].lower():
                     key_word.append(string_list[s])
-                    next_word.append(string_list[s+1])
+                    if string_list[s+1].lower() != 'is':
+                        next_word.append(string_list[s+1])
+                    else:
+                        next_word.append(string_list[s+2])
             df = list(datefinder.find_dates(string_list[s]))
             try:
                 date_found.append(df[0].strftime('%m/%d/%Y'))
@@ -130,22 +133,9 @@ def create_csv(file):
         csv_writer.writeheader()
         f.close()
 
-# def get_pstfiles():
-#     params = argparse.ArgumentParser()
-#     params.add_argument('pstfile', help="Directory of pst file to parse")
-#     args = params.parse_args()
-#     global pstfile
-#     pstfile = args.pstfile
-#     if not os.path.exists(pstfile):
-# 	    sys.exit("The directory %s does not exist, please try again." % pstfile)
-
 if __name__ == "__main__":
     get_keywords()
     pst = pypff.file()
-    # get_pstfiles()
-    # if pstfile:
-    #     for file in os.listdir(pstfile):
-    #         if file.endswith(".pst"):
     if glob.glob('*.pst'):
         for file in glob.glob('*.pst'):
             print('Parsing ' + file)
