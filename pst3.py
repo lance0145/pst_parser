@@ -3,6 +3,8 @@ import re
 import sys
 import csv
 import glob
+import tqdm
+import time
 import pypff
 import argparse
 import datefinder
@@ -29,15 +31,16 @@ def processMessage(message, folder_name, key_word, next_word, date_found, cc_fou
         "possible_id": possible_id,
     }
 
-def folderTraverse(base):
+def folderTraverse(base, file, desc):
     """
     The folderTraverse function walks through the base of the folder and scans for sub-folders and messages
     :param base: Base folder to scan for new items within the folder.
     :return: None
     """
-    for folder in base.sub_folders:
+    for folder in tqdm.tqdm(base.sub_folders, desc=desc, unit= " " + str(file), ncols= 100):
+        time.sleep(.01)
         if folder.number_of_sub_folders:
-            folderTraverse(folder)
+            folderTraverse(folder, file, desc="Parsing Sub Folders")
         message_list = []
         for message in folder.sub_messages:
             password = get_keyword_nextword(message.plain_text_body)
@@ -104,10 +107,10 @@ def get_keywords():
 	    sys.exit("The keywords.txt not found, place it under same directory of application, please try again.")
     global keywords
     keywords = []
-    print('Extracting keywords.txt')
     with open('keywords.txt', 'r', encoding='utf-8') as csv_file:
         csv_reader = csv.DictReader(csv_file, delimiter=',')
-        for row in csv_reader:
+        for row in tqdm.tqdm(csv_reader, desc="Extracting", unit=" keywords.txt"):
+            time.sleep(.01)
             keyword = row['keyword']
             keywords.append(keyword)
     csv_file.close()
@@ -137,15 +140,18 @@ if __name__ == "__main__":
     get_keywords()
     pst = pypff.file()
     if glob.glob('*.pst'):
-        for file in glob.glob('*.pst'):
-            print('Parsing ' + file)
+        for file in glob.glob("*.pst"):
             pst.open(file)
             base = pst.get_root_folder()
             header = ['folder_name', 'sender', 'key_word', 'next_word', 'date_found', 'cc_found', 'possible_id']
             create_csv(file)
-            folderTraverse(base)
+            folderTraverse(base, file, desc="Parsing Folders")
             pst.close()
-            print("Saving " + filename)
+            #print("Saving " + filename)
+            for folder in tqdm.trange(100, desc="Saving", unit= " " + str(filename), ncols= 100):
+                time.sleep(.01)
+                pass
+                
     else:
         sys.exit("The pst file/s not found, place it under same directory of application, please try again.")
     print("Done.")
