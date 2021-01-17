@@ -54,6 +54,7 @@ def folderTraverse(base, file, desc):
             cc_found2 = ", ".join(str(e) for e in cc_found2)
             possible_id2 = [x for x in possible_id if x]
             possible_id2 = ", ".join(str(e) for e in possible_id2)
+            print(str(len(key_word2)), str(len(next_word2)), str(len(date_found2)), str(len(cc_found2)), str(len(possible_id2)))
             message_dict = processMessage(message, folder.name, key_word2, next_word2, date_found2, cc_found2, possible_id2)
             message_list.append(message_dict)
         folderReport(message_list)
@@ -147,12 +148,11 @@ if __name__ == "__main__":
             create_csv(file)
             folderTraverse(base, file, desc="Parsing Folders")
             pst.close()
-            #print("Saving " + filename)
             for folder in tqdm.trange(100, desc="Saving", unit= " " + str(filename), ncols= 100):
                 time.sleep(.01)
                 pass
-                
+            print(f"Total: Keyword matched: {len(key_word)}, Nextword matched: {len(next_word)}, Date found: {len(date_found)}, Credit Card found: {len(cc_found)}, Posible IDs: {len(possible_id)}.")                
     else:
         sys.exit("The pst file/s not found, place it under same directory of application, please try again.")
-    print("Done.")
+    print("Done")
     
