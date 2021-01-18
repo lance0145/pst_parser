@@ -15,7 +15,7 @@ __date__ = '20210111'
 __version__ = 0.01
 __description__ = 'This scripts handles processing and output of PST Email Containers'
 
-def processMessage(message, folder_name, key_word, next_word, date_found, cc_found, possible_id):
+def processMessage(message, folder_name, key_word, date_found, cc_found, possible_id):
     """
     The processMessage function processes multi-field messages to simplify collection of information
     :param message: pypff.Message object
@@ -25,7 +25,6 @@ def processMessage(message, folder_name, key_word, next_word, date_found, cc_fou
         "folder_name": folder_name,
         "sender": message.sender_name,
         "key_word": key_word,
-        "next_word": next_word,
         "date_found": date_found,
         "cc_found": cc_found,
         "possible_id": possible_id,
@@ -46,16 +45,14 @@ def folderTraverse(base, file, desc):
             password = get_keyword_nextword(message.plain_text_body)
             key_word2 = [x for x in key_word if x]
             key_word2 = ", ".join(str(e) for e in key_word2)
-            next_word2 = [x for x in next_word if x]
-            next_word2 = ", ".join(str(e) for e in next_word2)
             date_found2 = [x for x in date_found if x]
             date_found2 = ", ".join(str(e) for e in date_found2)
             cc_found2 = [x for x in cc_found if x]
             cc_found2 = ", ".join(str(e) for e in cc_found2)
             possible_id2 = [x for x in possible_id if x]
             possible_id2 = ", ".join(str(e) for e in possible_id2)
-            print(str(len(key_word2)), str(len(next_word2)), str(len(date_found2)), str(len(cc_found2)), str(len(possible_id2)))
-            message_dict = processMessage(message, folder.name, key_word2, next_word2, date_found2, cc_found2, possible_id2)
+            #print(str(len(key_word2)), str(len(date_found2)), str(len(cc_found2)), str(len(possible_id2)))
+            message_dict = processMessage(message, folder.name, key_word2, date_found2, cc_found2, possible_id2)
             message_list.append(message_dict)
         folderReport(message_list)
 
@@ -72,10 +69,9 @@ def folderReport(message_list):
         f.close()
 
 def get_keyword_nextword(my_string):
-    global key_word, next_word, date_found, cc_found, possible_id
+    global key_word, date_found, cc_found, possible_id
     possible_id = []
     key_word = []
-    next_word = []
     date_found = []
     cc_found = []
     try:
@@ -84,15 +80,15 @@ def get_keyword_nextword(my_string):
         for s in range(len(string_list)):
             for k in range(len(keywords)):
                 if keywords[k].lower() in string_list[s].lower():
-                    key_word.append(string_list[s])
-                    if string_list[s+1].lower() != 'is':
-                        next_word.append(string_list[s+1])
+                    if 'address' in string_list[s].lower()  or 'addrs' in string_list[s].lower()  or 'addr' in string_list[s].lower():
+                        key_word.append(string_list[s] + " " + string_list[s+1] + " " + string_list[s+2] + " " + string_list[s+3] + " " + string_list[s+4] + " " + string_list[s+5] + " " + string_list[s+6] + " " + string_list[s+7])
+                    elif string_list[s+1].lower() != 'is':
+                        key_word.append(string_list[s] + " " + string_list[s+1])
                     else:
-                        next_word.append(string_list[s+2])
+                        key_word.append(string_list[s] + " " + string_list[s+2])
             df = list(datefinder.find_dates(string_list[s]))
             try:
                 date_found.append(df[0].strftime('%m/%d/%Y'))
-                #print(string_list[s], string_list[s+1], df[0].strftime('%m/%d/%Y'))
             except:
                 pass
             cc = re.findall(r"(^|\s+)(\d{4}[ -]\d{4}[ -]\d{4}[ -]\d{4})(?:\s+|$)", string_list[s])
@@ -101,7 +97,7 @@ def get_keyword_nextword(my_string):
             possible_id.append(id)
     except Exception as e:
         pass
-    return key_word, next_word, date_found, cc_found, possible_id
+    return key_word, date_found, cc_found, possible_id
 
 def get_keywords():
     if not os.path.exists('keywords.txt'):
@@ -144,14 +140,14 @@ if __name__ == "__main__":
         for file in glob.glob("*.pst"):
             pst.open(file)
             base = pst.get_root_folder()
-            header = ['folder_name', 'sender', 'key_word', 'next_word', 'date_found', 'cc_found', 'possible_id']
+            header = ['folder_name', 'sender', 'key_word', 'date_found', 'cc_found', 'possible_id']
             create_csv(file)
             folderTraverse(base, file, desc="Parsing Folders")
             pst.close()
             for folder in tqdm.trange(100, desc="Saving", unit= " " + str(filename), ncols= 100):
                 time.sleep(.01)
                 pass
-            print(f"Total: Keyword matched: {len(key_word)}, Nextword matched: {len(next_word)}, Date found: {len(date_found)}, Credit Card found: {len(cc_found)}, Posible IDs: {len(possible_id)}.")                
+            print(f"Total: Folder: 0, Message: 0, Keyword matched: {len(key_word)}, Date found: {len(date_found)}, Credit Card found: {len(cc_found)}, Posible IDs: {len(possible_id)}.")                
     else:
         sys.exit("The pst file/s not found, place it under same directory of application, please try again.")
     print("Done")
