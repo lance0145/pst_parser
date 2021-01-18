@@ -38,26 +38,26 @@ def folderTraverse(base, file, desc):
     :param base: Base folder to scan for new items within the folder.
     :return: None
     """
-    global message
-    for folder in tqdm.tqdm(base.sub_folders, desc=desc, unit= " " + str(file), ncols= 100):
-        time.sleep(.01)
+    for folder in base.sub_folders:
         if folder.number_of_sub_folders:
             folderTraverse(folder, file, desc="Parsing Sub Folders")
-        message_list = []
-        for message in folder.sub_messages:
-            get_keyword_nextword(message.plain_text_body)
-            key_word2 = [x for x in key_word if x]
-            key_word2 = ", ".join(str(e) for e in key_word2)
-            date_found2 = [x for x in date_found if x]
-            date_found2 = ", ".join(str(e) for e in date_found2)
-            cc_found2 = [x for x in cc_found if x]
-            cc_found2 = ", ".join(str(e) for e in cc_found2)
-            #possible_id2 = [x for x in possible_id if x]
-            #possible_id2 = ", ".join(str(e) for e in possible_id2)
-            #print(str(len(key_word2)), str(len(date_found2)), str(len(cc_found2)), str(len(possible_id2)))
-            message_dict = processMessage(message, folder.name, key_word2, date_found2, cc_found2)#, possible_id2)
-            message_list.append(message_dict)
-        folderReport(message_list)
+        if folder.number_of_sub_messages != 0:
+            print("Parsing {} Folder with {} messages".format(folder.name, folder.number_of_sub_messages))
+            message_list = []
+            for message in tqdm.tqdm(folder.sub_messages, unit= " " + str(file), ncols= 100):
+                get_keyword_nextword(message.plain_text_body)
+                key_word2 = [x for x in key_word if x]
+                key_word2 = ", ".join(str(e) for e in key_word2)
+                date_found2 = [x for x in date_found if x]
+                date_found2 = ", ".join(str(e) for e in date_found2)
+                cc_found2 = [x for x in cc_found if x]
+                cc_found2 = ", ".join(str(e) for e in cc_found2)
+                #possible_id2 = [x for x in possible_id if x]
+                #possible_id2 = ", ".join(str(e) for e in possible_id2)
+                #print(str(len(key_word2)), str(len(date_found2)), str(len(cc_found2)), str(len(possible_id2)))
+                message_dict = processMessage(message, folder.name, key_word2, date_found2, cc_found2)#, possible_id2)
+                message_list.append(message_dict)
+            folderReport(message_list)
 
 def folderReport(message_list):
     """
@@ -70,6 +70,8 @@ def folderReport(message_list):
         csv_writer = csv.DictWriter(f, delimiter='|', fieldnames=header)
         csv_writer.writerows(message_list)
         f.close()
+    #print(f"Total: Message: {len(message_list)}")
+    # print(f"Total: Folder: 0, Message: 0, Keyword matched: {len(key_word)}, Date found: {len(date_found)}, Credit Card found: {len(cc_found)}.")# Posible IDs: {len(possible_id)}.")   
 
 def get_keyword_nextword(my_string):
     global key_word, date_found, cc_found#, possible_id
@@ -109,7 +111,8 @@ def get_keywords():
     keywords = []
     with open('keywords.txt', 'r', encoding='utf-8') as csv_file:
         csv_reader = csv.DictReader(csv_file, delimiter=',')
-        for row in tqdm.tqdm(csv_reader, desc="Extracting", unit=" keywords.txt"):
+        print("Preparing Keywords")
+        for row in tqdm.tqdm(csv_reader, unit=" keywords.txt"):
             time.sleep(.01)
             keyword = row['keyword']
             keywords.append(keyword)
@@ -147,10 +150,10 @@ if __name__ == "__main__":
             create_csv(file)
             folderTraverse(base, file, desc="Parsing Folders")
             pst.close()
-            for folder in tqdm.trange(100, desc="Saving", unit= " " + str(filename), ncols= 100):
+            print("Saving Parsed Result in Report Folder")
+            for folder in tqdm.trange(100, unit= " " + str(filename), ncols= 100):
                 time.sleep(.01)
-                pass
-            print(f"Total: Folder: 0, Message: 0, Keyword matched: {len(key_word)}, Date found: {len(date_found)}, Credit Card found: {len(cc_found)}.")# Posible IDs: {len(possible_id)}.")                
+                pass             
     else:
         sys.exit("The pst file/s not found, place it under same directory of application, please try again.")
     print("Done")
