@@ -83,9 +83,9 @@ def get_keyword_nextword(my_string):
         for s in range(len(string_list)):
             for k in range(len(keywords)):
                 if keywords[k].lower() in string_list[s].lower():
-                    if 'address' in string_list[s].lower()  or 'addrs' in string_list[s].lower()  or 'addr' in string_list[s].lower():
+                    if 'address:' in string_list[s].lower():#  or 'addrs' in string_list[s].lower()  or 'addr' in string_list[s].lower():
                         key_word.append(string_list[s] + " " + string_list[s+1] + " " + string_list[s+2] + " " + string_list[s+3] + " " + string_list[s+4] + " " + string_list[s+5] + " " + string_list[s+6] + " " + string_list[s+7])
-                    elif string_list[s+1].lower() == 'is' or string_list[s+1].lower() == 'for' or string_list[s+1].lower() == 'if' or string_list[s+1].lower() == 'on' or string_list[s+1].lower() == 'to' or string_list[s+1].lower() == 'and' or string_list[s+1].lower() == 'the':
+                    elif string_list[s+1].lower() == 'is' or string_list[s+1].lower() == 'for' or string_list[s+1].lower() == 'if' or string_list[s+1].lower() == 'on' or string_list[s+1].lower() == 'to' or string_list[s+1].lower() == 'and' or string_list[s+1].lower() == '&':
                         key_word.append(string_list[s] + " " + string_list[s+2])
                     else:
                         key_word.append(string_list[s] + " " + string_list[s+1])
