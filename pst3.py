@@ -89,9 +89,9 @@ def get_keyword_nextword(my_string):
         for s in range(len(string_list)):
             for k in range(len(keywords)):
                 if keywords[k].lower() in string_list[s].lower():
-                    if 'address:' in string_list[s].lower():#  or 'addrs' in string_list[s].lower()  or 'addr' in string_list[s].lower():
+                    if 'address:' in string_list[s].lower():
                         key_word.append(string_list[s] + " " + string_list[s+1] + " " + string_list[s+2] + " " + string_list[s+3] + " " + string_list[s+4] + " " + string_list[s+5] + " " + string_list[s+6] + " " + string_list[s+7])
-                    elif string_list[s+1].lower() == 'is' or string_list[s+1].lower() == 'is:':
+                    elif string_list[s+1].lower() == 'is' or string_list[s+1].lower() == 'is:' or string_list[s+1].lower() == 'are' or string_list[s+1].lower() == 'are:':
                         key_word.append(string_list[s] + " " + string_list[s+2])
                     elif string_list[s+1].lower() in false_positive:
                         pass
@@ -148,6 +148,7 @@ def create_csv(file):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PST search tool..")
     parser.add_argument("-s", "--search", help="Keyword to search on PST file")
+    parser.add_argument("-f", "--file", help="File path to input PST file")
     args = parser.parse_args()
     if args.search:
         keywords = []
@@ -155,7 +156,21 @@ if __name__ == "__main__":
     else:
         get_keywords()
     pst = pypff.file()
-    if glob.glob('*.pst'):
+    if args.file:
+        msg = 0
+        pst.open(args.file)
+        base = pst.get_root_folder()
+        header = ['folder_name', 'sender', 'key_word', 'cc_found']#'date_found', 'possible_id']
+        create_csv(args.file)
+        folderTraverse(base, args.file)
+        pst.close()
+        print("Saving Parsed Result in Report Folder")
+        for folder in tqdm.trange(100, unit= " " + str(filename), ncols= 100):
+            time.sleep(.01)
+            pass   
+        print(f"Total Messages: {msg}")
+        print(f"Finished Parsing {args.file}")
+    elif glob.glob('*.pst'):
         for file in glob.glob("*.pst"):
             msg = 0
             pst.open(file)
