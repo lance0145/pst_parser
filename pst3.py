@@ -24,7 +24,7 @@ def processMessage(message, folder_name, key_word, cc_found):
     return {
         "folder_name": folder_name,
         #"delivery_time": message.delivery_time,
-        # "subject": message.subject,
+        "subject": message.subject,
         "sender": message.sender_name,
         "key_word": key_word,
         # "date_found": date_found,
@@ -70,10 +70,14 @@ def folderReport(message_list):
     :folder_name: The name of an Outlook folder within a PST
     :return: None
     """
-    with open(filename, 'a+', encoding='utf-8') as f:
-        csv_writer = csv.DictWriter(f, delimiter='|', fieldnames=header)
-        csv_writer.writerows(message_list)
-        f.close()
+    if args.output:
+        with open(filename, 'a+', encoding='utf-8') as f:
+            csv_writer = csv.DictWriter(f, delimiter='|', fieldnames=header)
+            csv_writer.writerows(message_list)
+            f.close()
+    else:
+        if len(message_list) > 0:
+            print(message_list)
     
 def get_keyword_nextword(my_string):
     global key_word, cc_found#, possible_id, date_found
@@ -82,7 +86,7 @@ def get_keyword_nextword(my_string):
     # date_found = []
     cc_found = []
     false_positive = ['for', 'to', 'the', 'must', 'if', 'and', 'or', 'i\'ve', 'protected', '&', 'which', 'must',\
-        'this', 'via', 'the', 'must', 'etc', 'has', 'so', 'it', 'by', 'on', 'its', 'please']
+        'this', 'via', 'the', 'must', 'etc', 'has', 'so', 'it', 'by', 'on', 'its', 'please', 'no', 'as', 'when', 'will']
     try:
         my_string = my_string.decode()
         string_list = my_string.split()
@@ -93,7 +97,7 @@ def get_keyword_nextword(my_string):
                         key_word.append(string_list[s] + " " + string_list[s+1] + " " + string_list[s+2] + " " + string_list[s+3] + " " + string_list[s+4] + " " + string_list[s+5] + " " + string_list[s+6] + " " + string_list[s+7])
                     elif string_list[s+1].lower() == 'is' or string_list[s+1].lower() == 'is:' or string_list[s+1].lower() == 'are' or string_list[s+1].lower() == 'are:':
                         key_word.append(string_list[s] + " " + string_list[s+2])
-                    elif string_list[s+1].lower() in false_positive:
+                    elif args.include == True and string_list[s+1].lower() in false_positive:
                         pass
                     else:
                         key_word.append(string_list[s] + " " + string_list[s+1])
@@ -125,30 +129,33 @@ def get_keywords():
     csv_file.close()
 
 def create_csv(file):
-    global filename
-    filename = "report/" + str(file)[:-4] + "_" + date.today().strftime('%Y.%m.%d') + ".csv"
-    file_exist = False
-    file_int = 0
-    if not os.path.exists(filename):
-        os.makedirs(os.path.dirname(filename), 0o777, True)
-        data = open(filename, "w", encoding='utf-8')
-        file_exist = True
-    while (file_exist == False):
-        file_int += 1
-        filename = "report/" + str(file)[:-4] + "_" + date.today().strftime('%Y.%m.%d') + "_" + str(file_int) + ".csv"
+    if args.output:
+        global filename
+        filename = "report/" + str(file)[:-4] + "_" + date.today().strftime('%Y.%m.%d') + ".csv"
+        file_exist = False
+        file_int = 0
         if not os.path.exists(filename):
             os.makedirs(os.path.dirname(filename), 0o777, True)
             data = open(filename, "w", encoding='utf-8')
             file_exist = True
-    with open(filename, 'w', encoding='utf-8') as f:
-        csv_writer = csv.DictWriter(f, delimiter='|', fieldnames=header)
-        csv_writer.writeheader()
-        f.close()
+        while (file_exist == False):
+            file_int += 1
+            filename = "report/" + str(file)[:-4] + "_" + date.today().strftime('%Y.%m.%d') + "_" + str(file_int) + ".csv"
+            if not os.path.exists(filename):
+                os.makedirs(os.path.dirname(filename), 0o777, True)
+                data = open(filename, "w", encoding='utf-8')
+                file_exist = True
+        with open(filename, 'w', encoding='utf-8') as f:
+            csv_writer = csv.DictWriter(f, delimiter='|', fieldnames=header)
+            csv_writer.writeheader()
+            f.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PST search tool..")
-    parser.add_argument("-s", "--search", help="Keyword to search on PST file")
-    parser.add_argument("-f", "--file", help="File path to input PST file")
+    parser.add_argument("-s", "--search", help="Keyword to search on PST file, if not defined will search on keywords.txt on same path.")
+    parser.add_argument("-f", "--file", help="File path to input PST file, if not defined will get the pst file/s on same path.")
+    parser.add_argument("-i", "--include", action='store_true', help="Include all false positive word related to search, if not defined will not include it.")
+    parser.add_argument("-o", "--output", action='store_true', help="Create an output csv of search result on report folder on same path, if not defined output will show on screen.")
     args = parser.parse_args()
     if args.search:
         keywords = []
@@ -160,14 +167,15 @@ if __name__ == "__main__":
         msg = 0
         pst.open(args.file)
         base = pst.get_root_folder()
-        header = ['folder_name', 'sender', 'key_word', 'cc_found']#'date_found', 'possible_id']
+        header = ['folder_name', 'sender', 'subject', 'key_word', 'cc_found']#'date_found', 'possible_id']
         create_csv(args.file)
         folderTraverse(base, args.file)
         pst.close()
-        print("Saving Parsed Result in Report Folder")
-        for folder in tqdm.trange(100, unit= " " + str(filename), ncols= 100):
-            time.sleep(.01)
-            pass   
+        if args.output:
+            print("Saving Parsed Result in Report Folder")
+            for folder in tqdm.trange(100, unit= " " + str(filename), ncols= 100):
+                time.sleep(.01)
+                pass   
         print(f"Total Messages: {msg}")
         print(f"Finished Parsing {args.file}")
     elif glob.glob('*.pst'):
@@ -175,14 +183,15 @@ if __name__ == "__main__":
             msg = 0
             pst.open(file)
             base = pst.get_root_folder()
-            header = ['folder_name', 'sender', 'key_word', 'cc_found']#'date_found', 'possible_id']
+            header = ['folder_name', 'sender', 'subject', 'key_word', 'cc_found']#'date_found', 'possible_id']
             create_csv(file)
             folderTraverse(base, file)
             pst.close()
-            print("Saving Parsed Result in Report Folder")
-            for folder in tqdm.trange(100, unit= " " + str(filename), ncols= 100):
-                time.sleep(.01)
-                pass   
+            if args.output:
+                print("Saving Parsed Result in Report Folder")
+                for folder in tqdm.trange(100, unit= " " + str(filename), ncols= 100):
+                    time.sleep(.01)
+                    pass   
             print(f"Total Messages: {msg}")
             print(f"Finished Parsing {file}")       
     else:
