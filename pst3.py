@@ -5,10 +5,11 @@ import csv
 import glob
 import tqdm
 import time
+import json
 import pypff
 import argparse
 import datefinder
-from datetime import date
+from datetime import date, datetime
 
 __author__ = 'Allan Abendanio'
 __date__ = '20210111'
@@ -23,7 +24,7 @@ def processMessage(message, folder_name, key_word, cc_found):
     """
     return {
         "folder_name": folder_name,
-        #"delivery_time": message.delivery_time,
+        "delivery_time": message.delivery_time.strftime("%m/%d/%Y, %H:%M:%S"),
         "subject": message.subject,
         "sender": message.sender_name,
         "key_word": key_word,
@@ -38,13 +39,11 @@ def folderTraverse(base, file):
     :param base: Base folder to scan for new items within the folder.
     :return: None
     """
-    global msg
     for folder in base.sub_folders:
         if folder.number_of_sub_folders:
             folderTraverse(folder, file)
         if folder.number_of_sub_messages != 0:
             print("Parsing {} Folder with {} messages".format(folder.name, folder.number_of_sub_messages))
-            msg = msg + folder.number_of_sub_messages
             message_list = []
             for message in tqdm.tqdm(folder.sub_messages, unit= " " + str(file), ncols= 100):
                 get_keyword_nextword(message.plain_text_body)
@@ -77,7 +76,7 @@ def folderReport(message_list):
             f.close()
     else:
         if len(message_list) > 0:
-            print(message_list)
+            json_msg.append(message_list)
     
 def get_keyword_nextword(my_string):
     global key_word, cc_found#, possible_id, date_found
@@ -154,7 +153,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="PST search tool..")
     parser.add_argument("-s", "--search", help="Keyword to search on PST file, if not defined will search on keywords.txt on same path.")
     parser.add_argument("-f", "--file", help="File path to input PST file, if not defined will get the pst file/s on same path.")
-    parser.add_argument("-i", "--include", action='store_true', help="Include all false positive word related to search, if not defined will not include it.")
+    parser.add_argument("-i", "--include", action='store_true', help="Include all false positive word related to search, if not defined will omit it.")
     parser.add_argument("-o", "--output", action='store_true', help="Create an output csv of search result on report folder on same path, if not defined output will show on screen.")
     args = parser.parse_args()
     if args.search:
@@ -164,10 +163,11 @@ if __name__ == "__main__":
         get_keywords()
     pst = pypff.file()
     if args.file:
-        msg = 0
+        ctr = 0
+        json_msg = []
         pst.open(args.file)
         base = pst.get_root_folder()
-        header = ['folder_name', 'sender', 'subject', 'key_word', 'cc_found']#'date_found', 'possible_id']
+        header = ['folder_name', 'delivery_time', 'sender', 'subject', 'key_word', 'cc_found']#'date_found', 'possible_id']
         create_csv(args.file)
         folderTraverse(base, args.file)
         pst.close()
@@ -175,15 +175,22 @@ if __name__ == "__main__":
             print("Saving Parsed Result in Report Folder")
             for folder in tqdm.trange(100, unit= " " + str(filename), ncols= 100):
                 time.sleep(.01)
-                pass   
-        print(f"Total Messages: {msg}")
+                pass 
+        else:
+            print("Printing Parsed Result")
+            for jm in json_msg:
+                for j in jm:
+                    print(j)
+                    ctr += 1
+        print(f"Total Search Result: {ctr}")
         print(f"Finished Parsing {args.file}")
     elif glob.glob('*.pst'):
         for file in glob.glob("*.pst"):
-            msg = 0
+            ctr = 0
+            json_msg = []
             pst.open(file)
             base = pst.get_root_folder()
-            header = ['folder_name', 'sender', 'subject', 'key_word', 'cc_found']#'date_found', 'possible_id']
+            header = ['folder_name', 'delivery_time', 'sender', 'subject', 'key_word', 'cc_found']#'date_found', 'possible_id']
             create_csv(file)
             folderTraverse(base, file)
             pst.close()
@@ -191,8 +198,14 @@ if __name__ == "__main__":
                 print("Saving Parsed Result in Report Folder")
                 for folder in tqdm.trange(100, unit= " " + str(filename), ncols= 100):
                     time.sleep(.01)
-                    pass   
-            print(f"Total Messages: {msg}")
+                    pass
+            else:
+                print("Printing Parsed Result")
+                for jm in json_msg:
+                    for j in jm:
+                        print(j)
+                        ctr += 1
+            print(f"Total Search Result: {ctr}")
             print(f"Finished Parsing {file}")       
     else:
         sys.exit("The pst file/s not found, place it under same directory of application, please try again.")
